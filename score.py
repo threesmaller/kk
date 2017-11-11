@@ -17,10 +17,10 @@ for cnt in range(0, 1):
     rand = np.random.binomial(10, random(), size=(37092, 28))
     predict = predict + np.around(rand/10.0)
 
+    y_scores = np.array(predict.reshape(-1))
     if len(y_true) > len(y_scores):
         y_true = y_true[:len(y_scores)]
 
-    y_scores = np.array(predict.reshape(-1))
     if len(y_true) == len(y_scores):
         fpr, tpr, thresholds = metrics.roc_curve(y_true, y_scores, pos_label = 1)
         score = metrics.auc(fpr, tpr)
