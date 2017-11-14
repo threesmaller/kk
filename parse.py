@@ -64,6 +64,26 @@ def parse_data_file(file_id):
             data_matrix[x, y, z] += value
         cPickle.dump(data_matrix, open(user_file_path, 'wb'))
 
+def parse_create_time():
+    user_week = {}
+    data_file_path = '/data/public/user_create_time.csv'
+    with open(data_file_path) as data_file:
+        data_file.readline()
+        for data_line in data_file:
+            data = data_line.split(',')
+            user_id = int(data[0])
+            create_day = data[1].rstrip() + '-01'
+            datetime_object = datetime.datetime.strptime(create_day, '%Y-%m-%d')
+            if datetime_object.year < 2017:
+                week = 1
+            else:
+                week = datetime_object.isocalendar()[1]
+                if week == 52:
+                    week = 1
+            total_week = 33 - week
+            user_week[user_id] = total_week
+    return user_week
+
 class myThread (threading.Thread):
     def __init__(self, threadID):
         threading.Thread.__init__(self)
@@ -71,11 +91,12 @@ class myThread (threading.Thread):
     def run(self):
         parse_data_file(self.threadID)
 
-threads = []
-for i in range(1, 76):
-    thread = myThread(i)
-    thread.start()
-    threads.append(thread)
+def parse():
+    threads = []
+    for i in range(1, 76):
+        thread = myThread(i)
+        thread.start()
+        threads.append(thread)
 
-for t in threads:
-    t.join()
+    for t in threads:
+        t.join()
