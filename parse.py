@@ -1,4 +1,4 @@
-import os, datetime, numpy, fractions, time, threading, cPickle
+import os, datetime, numpy, fractions, time, threading, cPickle, random
 
 #train:week1-week32 predict:week33
 #week * user_id * time_slot
@@ -14,16 +14,20 @@ import os, datetime, numpy, fractions, time, threading, cPickle
 #train:0-57158 predict:57159-94250
 
 #(user_id, week, slot)
-#data_matrix = numpy.zeros((94251, 53, 29))
+#data_matrix = numpy.zeros((94252, 53, 29))
 
 def parse_data_file(file_id):
-    global data_matrix
+    last_user_id = -1
     data_file_path = '/data/public/data-%03d.csv'%(file_id);
+    data_matrix = numpy.zeros((1, 53, 28))
     with open(data_file_path) as data_file:
         data_file.readline()
         for data_line in data_file:
             data = data_line.split(',')
-            user_id = data[0]
+            user_id = int(data[0])
+            user_check_file_path = '/data/user/data-%03d.pkl'%(user_id);
+            if os.path.isfile(user_check_file_path):
+                continue
             datetime_object = datetime.datetime.strptime(data[4], '%Y-%m-%d %H:%M:%S.%f')
             week = datetime_object.isocalendar()[1]
             weekday = datetime_object.weekday()
@@ -43,11 +47,22 @@ def parse_data_file(file_id):
                 slot_size = 4*60*60
             slot += slot_offset
             play_duration = data[5]
-            x = int(user_id) + 1
-            y = week
-            z = slot + 1
+     
+            if last_user_id == -1:
+                data_matrix = numpy.zeros((1, 53, 28))
+                user_file_path = '/data/user/data-%03d.pkl'%(user_id);
+                last_user_id = user_id
+            elif last_user_id != user_id:
+                cPickle.dump(data_matrix, open(user_file_path, 'wb'))
+                user_file_path = '/data/user/data-%03d.pkl'%(user_id);
+                data_matrix = numpy.zeros((1, 52, 28))
+                last_user_id = user_id
+            x = 0
+            y = week - 1
+            z = slot
             value = float(play_duration) / slot_size
             data_matrix[x, y, z] += value
+        cPickle.dump(data_matrix, open(user_file_path, 'wb'))
 
 class myThread (threading.Thread):
     def __init__(self, threadID):
@@ -56,23 +71,11 @@ class myThread (threading.Thread):
     def run(self):
         parse_data_file(self.threadID)
 
-pkl_file_path = '/data/data_duration.pkl'
-if os.path.exists(pkl_file_path):
-    data_matrix = cPickle.load(open('/data/data_duration.pkl', 'rb'))
-else:
-    data_matrix = numpy.zeros((94251, 53, 29))
-    numpy.set_printoptions(precision = 4)
+threads = []
+for i in range(1, 76):
+    thread = myThread(i)
+    thread.start()
+    threads.append(thread)
 
-    threads = []
-    for i in range(1, 76):
-        thread = myThread(i)
-        thread.start()
-        threads.append(thread)
-
-    for t in threads:
-        t.join()
-
-    cPickle.dump(data_matrix, open('/dat/data_duration.pkl', 'wb'))
-
-print(data_matrix[1, 23, 14])
-print(1, 23, 14, 0.238645833333)
+for t in threads:
+    t.join()

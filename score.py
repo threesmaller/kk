@@ -1,39 +1,36 @@
-import numpy as np
-from sklearn import datasets,svm,metrics,model_selection,preprocessing
-from random import *
+import os, numpy, cPickle
+from sklearn import datasets, svm, metrics, model_selection, preprocessing
 
-max_score = 0
-y_true = []
-for i in range(1, 31):
-    data_file_path = '/data/public/label-%03d.csv'%(i);
-    data = np.genfromtxt(data_file_path, delimiter=',')
-    data = np.delete(data, (0), axis=0)
-    data = np.delete(data, (0), axis=1)
-    true = np.array(data.reshape(-1))
-    y_true = np.append(y_true, true)
+def load_train():
+    for user_id in range (0, 57159):
+        user_file_path = '/data/data/data-%03d.pkl'%(user_id);
+        if not os.path.isfile(user_file_path):
+            continue
+        data_matrix = cPickle.load(open(user_file_path, 'rb'))
+        y_true = numpy.append(y_true, data_matrix[user_id, 32, :].reshape(-1))
 
-for cnt in range(0, 1):
 
-    rand = np.random.binomial(10, random(), size=(37092, 28))
-    predict = predict + np.around(rand/10.0)
+def train_score():
+    predict = numpy.zeros((57159, 28))
+    y_true = []
 
-    y_scores = np.array(predict.reshape(-1))
-    if len(y_true) > len(y_scores):
-        y_true = y_true[:len(y_scores)]
+    for i in range (1, 46):
+        data_file_path = '/data/public/label-%03d.csv'%(i);
+        data = numpy.genfromtxt(data_file_path, delimiter=',')
+        data = numpy.delete(data, (0), axis=0)
+        data = numpy.delete(data, (0), axis=1)
+        true = numpy.array(data.reshape(-1))
+        y_true = numpy.append(y_true, true)
 
-    if len(y_true) == len(y_scores):
-        fpr, tpr, thresholds = metrics.roc_curve(y_true, y_scores, pos_label = 1)
-        score = metrics.auc(fpr, tpr)
+    for user_id in range (0, 57159):
+        user_file_path = '/data/predict/data-%03d.pkl'%(user_id);
+        if not os.path.isfile(user_file_path):
+            continue
+        data_matrix = cPickle.load(open(user_file_path, 'rb'))
+        predict[user_id, :] = data_matrix    
+        y_scores = numpy.array(predict.reshape(-1))
 
-        if score > max_score:
-            sol = np.asarray(predict)
-            fd = open('../solution.csv', 'w')
-            fd.write('user_id,time_slot_0,time_slot_1,time_slot_2,time_slot_3,time_slot_4,time_slot_5,time_slot_6,time_slot_7,time_slot_8,time_slot_9,time_slot_10,time_slot_11,time_slot_12,time_slot_13,time_slot_14,time_slot_15,time_slot_16,time_slot_17,time_slot_18,time_slot_19,time_slot_20,time_slot_21,time_slot_22,time_slot_23,time_slot_24,time_slot_25,time_slot_26,time_slot_27')
-            fd.write('\n')
-            for i in range (0, 37092):
-                fd.write(str(i+57159))
-                for j in range (0, 28):
-                    fd.write(',' + str.format("{0:.3f}", sol[i, j]));
-                fd.write('\n')
-            fd.close()
-            max_score = score
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_scores, pos_label = 1)
+    return metrics.auc(fpr, tpr)
+
+print(train_score())
