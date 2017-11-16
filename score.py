@@ -15,4 +15,6 @@ def train_score(predict):
     y_scores = numpy.array(predict.reshape(-1))
 
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_scores, pos_label = 1)
-    return metrics.auc(fpr, tpr)
+    auc = metrics.auc(fpr, tpr)
+
+    return fpr, tpr, auc

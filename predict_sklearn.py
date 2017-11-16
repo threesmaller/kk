@@ -17,6 +17,19 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from scipy import interp
 import os, cPickle, threading, random
 
+def output_result(predict):
+    solution = np.asarray(predict)
+    fd = open('/data/solution.csv', 'w')
+    fd.write('user_id,time_slot_0,time_slot_1,time_slot_2,time_slot_3,time_slot_4,time_slot_5,time_slot_6,time_slot_7,time_slot_8,time_slot_9,time_slot_10,time_slot_11,time_slot_12,time_slot_13,time_slot_14,time_slot_15,time_slot_16,time_slot_17,time_slot_18,time_slot_19,time_slot_20,time_slot_21,time_slot_22,time_slot_23,time_slot_24,time_slot_25,time_slot_26,time_slot_27')
+    fd.write('\n')
+    for i in range (0, 37092):
+        fd.write(str(i+57159))
+        for j in range (0, 28):
+            fd.write(',' + str.format("{0:.3f}", solution[i, j]));
+        fd.write('\n')
+    fd.close()
+
+
 names = [
     "Nearest Neighbors",
     "Linear SVM",
@@ -30,13 +43,13 @@ names = [
     "QDA"]
 
 classifiers = [
-    KNeighborsClassifier(4),
+    KNeighborsClassifier(3),
     SVC(kernel="linear", C=0.025),
     SVC(gamma=2, C=1),
     GaussianProcessClassifier(1.0 * RBF(1.0)),
-    DecisionTreeClassifier(max_depth=4),
-    RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-    MLPClassifier(),
+    DecisionTreeClassifier(max_depth=5),
+    RandomForestClassifier(max_depth = 4, n_estimators = 20),
+    MLPClassifier(alpha=1),
     AdaBoostClassifier(),
     GaussianNB(),
     QuadraticDiscriminantAnalysis()]
@@ -50,44 +63,19 @@ def learning(name, classifier):
     else:
         y_score = classifier.fit(X_train, y_train).predict_proba(X_test)
 
-    fpr, tpr, _ = roc_curve(y_test.ravel(), y_score.ravel())
-    roc_auc = auc(fpr, tpr)
+    return y_score
 
-    return roc_auc
-
-
-samples = 50000
-data_matrix = np.zeros((samples, 32, 28))
-traget_matrix = np.zeros((samples, 1, 28))
-
-def load_user(user_id):
-    global data_matrix
-    global traget_matrix
-    user_file_path = '/data/user/data-%03d.pkl'%(user_id)
+total = 94251
+samples = 57159
+data_matrix = np.zeros((total, 32, 28))
+traget_matrix = np.zeros((total, 1, 28))
+for user_id in range(1, total):
+    user_file_path = '/data/user/data-%03d.pkl'%(user_id);
     if not os.path.isfile(user_file_path):
-        return
+        continue
     matrix = cPickle.load(open(user_file_path, 'rb'))
     data_matrix[user_id, :, :] = matrix[0, 0:32, :]
     traget_matrix[user_id, :, :] = matrix[0, 32, :]
-
-class loadThread (threading.Thread):
-    def __init__(self, threadID):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-    def run(self):
-        load_user(self.threadID)
-
-def load():
-    for j in range(0, 1000):
-        threads = []
-        for i in range(0, 50):
-            thread = loadThread(j*50+i)
-            thread.start()
-            threads.append(thread)
-        for t in threads:
-            t.join()
-
-load()
 
 X = data_matrix[0:samples, :, :].reshape((samples, -1))
 y = traget_matrix[0:samples, :, :].reshape((samples, -1))
@@ -96,13 +84,16 @@ for i in range(0, y.shape[0]):
         if y[i, j] > 0:
             y[i, j] = 1
 
+
+Y = data_matrix[samples:, :, :].reshape((total-samples, -1))
+
 n_classes = y.shape[1]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.4)
+X_train = X
+y_train = y
 
-file = '/data/result' + str(random.randint(1, 100))
-for x in range(0, 1):
-    fd = open(file, 'a+')
-    score = learning(names[x], classifiers[x])
-    fd.write(names[x] + ':' + str(score) + '\n')
-    fd.close()
+X_test = Y
+
+for x in range(5, 6):
+    y_score = learning(names[x], classifiers[x])
+    output_result(y_score)

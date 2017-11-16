@@ -60,8 +60,7 @@ def parse_data_file(file_id):
             x = 0
             y = week - 1
             z = slot
-            value = float(play_duration) / slot_size
-            data_matrix[x, y, z] += value
+            data_matrix[x, y, z] += int(play_duration)
         cPickle.dump(data_matrix, open(user_file_path, 'wb'))
 
 def parse_create_time():
@@ -100,3 +99,5 @@ def parse():
 
     for t in threads:
         t.join()
+
+parse()
